@@ -1,0 +1,774 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CivicQuest — U.S. Citizenship Test Trainer</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Nunito:wght@600;700;800;900&display=swap" rel="stylesheet">
+<style>
+:root{
+  --blue:#2F6FED; --blue-d:#1E4FB8;
+  --red:#E5484D; --red-d:#B5303A; --red-l:#FFE3E3;
+  --green:#3DBE5C; --green-d:#2A9545; --green-l:#DDF7E3;
+  --gold:#FFC23D; --gold-d:#E09A00;
+  --ink:#24324A; --muted:#7A879C; --line:#E3E8F0; --bg:#FFFFFF; --soft:#F4F7FB;
+}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:Nunito,system-ui,sans-serif;font-weight:700}
+button{font-family:inherit;cursor:pointer}
+.app{max-width:620px;margin:0 auto;min-height:100vh;display:flex;flex-direction:column;position:relative}
+/* top bar */
+.topbar{position:sticky;top:0;z-index:20;background:#fff;border-bottom:2px solid var(--line);display:flex;align-items:center;justify-content:space-between;padding:10px 16px}
+.brand{display:flex;align-items:center;gap:8px;font-weight:900;font-size:20px;color:var(--blue)}
+.brand svg{width:34px;height:34px}
+.stats{display:flex;gap:14px;font-weight:900;font-size:16px}
+.stat{display:flex;align-items:center;gap:4px}
+.stat.fire{color:#FF8A00}.stat.gem{color:var(--blue)}.stat.goal{color:var(--green-d)}
+.stat svg{width:22px;height:22px}
+main{flex:1;padding:16px 16px 100px}
+/* bottom nav */
+.nav{position:fixed;bottom:0;left:50%;transform:translateX(-50%);width:100%;max-width:620px;background:#fff;border-top:2px solid var(--line);display:flex;justify-content:space-around;padding:6px 4px calc(6px + env(safe-area-inset-bottom));z-index:20}
+.nav button{background:none;border:2px solid transparent;border-radius:14px;padding:6px 12px;display:flex;flex-direction:column;align-items:center;gap:2px;font-size:12px;font-weight:800;color:var(--muted)}
+.nav button svg{width:28px;height:28px}
+.nav button.on{border-color:#BFD3FB;background:#EEF4FF;color:var(--blue)}
+/* chunky buttons */
+.btn{border:none;border-radius:16px;padding:14px 18px;font-size:16px;font-weight:900;letter-spacing:.6px;text-transform:uppercase;color:#fff;background:var(--blue);box-shadow:0 4px 0 var(--blue-d);transition:transform .05s, box-shadow .05s;width:100%}
+.btn:active:not(:disabled){transform:translateY(4px);box-shadow:0 0 0 var(--blue-d)}
+.btn:disabled{background:#E5E9F0;color:#A7B1C2;box-shadow:0 4px 0 #CDD4DF;cursor:default}
+.btn.green{background:var(--green);box-shadow:0 4px 0 var(--green-d)}
+.btn.red{background:var(--red);box-shadow:0 4px 0 var(--red-d)}
+.btn.gold{background:var(--gold);box-shadow:0 4px 0 var(--gold-d);color:#5A3B00}
+.btn.ghost{background:#fff;color:var(--blue);border:2px solid var(--line);box-shadow:0 4px 0 var(--line)}
+.btn.small{padding:10px 14px;font-size:13px;width:auto}
+/* unit banner & path */
+.unit{border-radius:18px;padding:16px 18px;color:#fff;display:flex;justify-content:space-between;align-items:center;gap:12px;margin:22px 0 10px;box-shadow:0 4px 0 rgba(0,0,0,.18)}
+.unit h3{margin:0;font-size:13px;opacity:.85;text-transform:uppercase;letter-spacing:1px;font-weight:900}
+.unit h2{margin:2px 0 0;font-size:20px;font-weight:900}
+.unit .sub{font-size:13px;opacity:.9;margin-top:4px}
+.unit button{background:rgba(255,255,255,.18);border:2px solid rgba(255,255,255,.45);color:#fff;border-radius:12px;padding:8px 12px;font-weight:900;font-size:13px;white-space:nowrap}
+.path{display:flex;flex-direction:column;align-items:center;gap:18px;padding:12px 0 6px}
+.node-wrap{position:relative;display:flex;flex-direction:column;align-items:center}
+.node{width:74px;height:68px;border-radius:50%;border:none;display:flex;align-items:center;justify-content:center;position:relative}
+.node svg{width:34px;height:34px}
+.node.locked{background:#E5E9F0;box-shadow:0 7px 0 #C8D0DC;color:#AEB8C7}
+.node.open{color:#fff}
+.node.done{background:var(--gold);box-shadow:0 7px 0 var(--gold-d);color:#fff}
+.node:active:not(.locked){transform:translateY(5px);box-shadow:0 2px 0 rgba(0,0,0,.2)!important}
+.node-label{font-size:12px;color:var(--muted);margin-top:12px;font-weight:800;text-align:center;max-width:140px}
+.start-tip{position:absolute;top:-44px;background:#fff;border:2px solid var(--line);border-radius:12px;padding:6px 12px;font-weight:900;font-size:14px;color:var(--blue);animation:bob 1.4s ease-in-out infinite;white-space:nowrap;z-index:2}
+.start-tip:after{content:"";position:absolute;bottom:-8px;left:50%;transform:translateX(-50%) rotate(45deg);width:12px;height:12px;background:#fff;border-right:2px solid var(--line);border-bottom:2px solid var(--line)}
+@keyframes bob{0%,100%{transform:translateY(0)}50%{transform:translateY(-5px)}}
+.ring{position:absolute;inset:-9px;border-radius:50%;border:5px solid #D9E3F4}
+/* cards */
+.card{border:2px solid var(--line);border-radius:18px;padding:16px;margin-bottom:12px;background:#fff}
+.card h4{margin:0 0 6px;font-size:17px;font-weight:900}
+.card p{margin:0;color:var(--muted);font-size:14px;font-weight:700;line-height:1.4}
+.row{display:flex;gap:12px;align-items:center}
+.icon-tile{width:54px;height:54px;border-radius:14px;display:flex;align-items:center;justify-content:center;flex-shrink:0}
+.icon-tile svg{width:30px;height:30px}
+h1.page{font-size:24px;font-weight:900;margin:6px 0 14px}
+/* lesson */
+.lesson{position:fixed;inset:0;background:#fff;z-index:50;display:flex;flex-direction:column}
+.lesson-inner{max-width:620px;width:100%;margin:0 auto;flex:1;display:flex;flex-direction:column;padding:14px 16px 0;overflow:auto}
+.lhead{display:flex;align-items:center;gap:14px}
+.x{background:none;border:none;color:#AEB8C7;padding:4px}
+.x svg{width:28px;height:28px}
+.pbar{flex:1;height:16px;background:#E5E9F0;border-radius:99px;overflow:hidden}
+.pbar>div{height:100%;background:var(--green);border-radius:99px;transition:width .35s;position:relative}
+.pbar>div:after{content:"";position:absolute;left:8px;right:8px;top:4px;height:4px;background:rgba(255,255,255,.35);border-radius:9px}
+.hearts{display:flex;align-items:center;gap:4px;color:var(--red);font-weight:900;font-size:17px}
+.hearts svg{width:24px;height:24px}
+.combo{text-align:center;color:#FF8A00;font-weight:900;font-size:14px;height:18px;margin-top:10px}
+.qtype{font-size:14px;font-weight:900;color:var(--muted);text-transform:uppercase;letter-spacing:.8px;margin:8px 0 6px;display:flex;align-items:center;gap:8px}
+.qtype .star{color:var(--gold-d)}
+.qbox{display:flex;gap:12px;align-items:flex-start;margin:6px 0 20px}
+.qbox .mascot{width:86px;flex-shrink:0}
+.bubble{position:relative;border:2px solid var(--line);border-radius:16px;padding:14px 16px;font-size:19px;font-weight:800;line-height:1.35;flex:1}
+.bubble:before{content:"";position:absolute;left:-9px;top:24px;width:14px;height:14px;background:#fff;border-left:2px solid var(--line);border-bottom:2px solid var(--line);transform:rotate(45deg)}
+.speak{background:none;border:none;color:var(--blue);padding:0 6px 0 0;vertical-align:-5px}
+.speak svg{width:24px;height:24px}
+.opts{display:flex;flex-direction:column;gap:10px}
+.opt{text-align:left;border:2px solid var(--line);border-bottom-width:4px;border-radius:14px;background:#fff;padding:14px 14px;font-size:16px;font-weight:800;color:var(--ink);display:flex;gap:12px;align-items:center;line-height:1.3}
+.opt .k{flex-shrink:0;width:28px;height:28px;border:2px solid var(--line);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:13px;color:var(--muted)}
+.opt.sel{border-color:#8DB2F8;background:#EEF4FF;color:var(--blue-d)}
+.opt.sel .k{border-color:#8DB2F8;color:var(--blue)}
+.opt.right{border-color:var(--green);background:var(--green-l);color:var(--green-d)}
+.opt.wrong{border-color:var(--red);background:var(--red-l);color:var(--red-d)}
+.opt:disabled{cursor:default}
+textarea.type{width:100%;min-height:110px;border:2px solid var(--line);border-radius:14px;background:var(--soft);padding:14px;font:inherit;font-size:18px;resize:none;color:var(--ink)}
+textarea.type:focus{outline:none;border-color:#8DB2F8;background:#fff}
+.lfoot{border-top:2px solid var(--line);padding:16px;margin-top:auto}
+.lfoot .inner{max-width:620px;margin:0 auto;display:flex;gap:12px;align-items:center}
+.lfoot.ok{background:var(--green-l);border-color:transparent}
+.lfoot.bad{background:var(--red-l);border-color:transparent}
+.fb{flex:1}
+.fb .t{font-size:21px;font-weight:900;display:flex;align-items:center;gap:8px}
+.lfoot.ok .t{color:var(--green-d)}.lfoot.bad .t{color:var(--red-d)}
+.fb .ans{font-size:15px;margin-top:4px;font-weight:800}
+.lfoot.ok .ans{color:var(--green-d)}.lfoot.bad .ans{color:var(--red-d)}
+.fb details{margin-top:6px;font-size:13px}
+.fb summary{cursor:pointer;opacity:.8}
+.fb ul{margin:4px 0 0;padding-left:18px}
+.fbbtn{width:160px;flex-shrink:0}
+@media (max-width:520px){.lfoot .inner{flex-direction:column;align-items:stretch}.fbbtn{width:100%}}
+.shake{animation:shake .35s}
+@keyframes shake{0%,100%{transform:translateX(0)}25%{transform:translateX(-8px)}75%{transform:translateX(8px)}}
+.pop{animation:pop .3s}
+@keyframes pop{0%{transform:scale(.9)}60%{transform:scale(1.04)}100%{transform:scale(1)}}
+/* results */
+.center{text-align:center;display:flex;flex-direction:column;align-items:center;justify-content:center;flex:1;padding:20px 0}
+.center h2{font-size:28px;font-weight:900;margin:14px 0 6px}
+.center .lead{color:var(--muted);font-size:16px;margin:0 0 22px}
+.tiles{display:flex;gap:12px;width:100%;justify-content:center;flex-wrap:wrap}
+.tile{border:2px solid;border-radius:16px;overflow:hidden;min-width:104px;flex:1;max-width:160px}
+.tile .h{color:#fff;font-size:12px;font-weight:900;text-transform:uppercase;padding:5px;letter-spacing:.6px}
+.tile .v{font-size:22px;font-weight:900;padding:12px 6px;display:flex;align-items:center;justify-content:center;gap:6px;background:#fff}
+/* study */
+.search{width:100%;border:2px solid var(--line);border-radius:14px;padding:12px 14px;font:inherit;font-size:16px;background:var(--soft);margin-bottom:10px}
+.search:focus{outline:none;border-color:#8DB2F8;background:#fff}
+.chips{display:flex;gap:8px;overflow-x:auto;padding-bottom:8px;margin-bottom:6px}
+.chip{flex-shrink:0;border:2px solid var(--line);border-radius:99px;padding:6px 12px;background:#fff;font-weight:800;font-size:13px;color:var(--muted)}
+.chip.on{background:var(--blue);border-color:var(--blue);color:#fff}
+.qitem{border:2px solid var(--line);border-radius:16px;padding:14px;margin-bottom:10px}
+.qitem .num{font-size:12px;color:var(--muted);font-weight:900;display:flex;gap:8px;align-items:center}
+.qitem .q{font-size:16px;font-weight:900;margin:4px 0 8px}
+.qitem ul{margin:0;padding-left:20px;color:#3C4B66;font-size:15px;font-weight:700;line-height:1.5}
+.badge{font-size:11px;font-weight:900;border-radius:6px;padding:2px 6px}
+.badge.star{background:#FFF2CC;color:#8A5A00}
+.badge.cur{background:#E6EEFF;color:var(--blue-d)}
+.badge.loc{background:#EDE7FF;color:#5B3CC4}
+.dots{display:inline-flex;gap:3px;margin-left:auto}
+.dots i{width:8px;height:8px;border-radius:50%;background:#E5E9F0;display:block}
+.dots i.f{background:var(--green)}
+.note{font-size:13px;color:var(--muted);margin-top:6px}
+/* flashcard */
+.flash{perspective:1000px;width:100%;height:320px;margin:10px 0 18px;cursor:pointer}
+.flash .in{position:relative;width:100%;height:100%;transition:transform .45s;transform-style:preserve-3d}
+.flash.flip .in{transform:rotateY(180deg)}
+.flash .face{position:absolute;inset:0;backface-visibility:hidden;border:2px solid var(--line);border-bottom-width:5px;border-radius:20px;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:22px;text-align:center;font-size:21px;font-weight:900;background:#fff;overflow:auto}
+.flash .back{transform:rotateY(180deg);background:#F2F7FF;font-size:17px}
+.flash .back ul{text-align:left;margin:0;padding-left:20px;line-height:1.5}
+.flash small{font-size:12px;color:var(--muted);font-weight:900;text-transform:uppercase;letter-spacing:.8px;margin-bottom:10px}
+/* profile */
+.grid2{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:16px}
+.sbox{border:2px solid var(--line);border-radius:16px;padding:12px;display:flex;gap:10px;align-items:center}
+.sbox svg{width:28px;height:28px;flex-shrink:0}
+.sbox b{display:block;font-size:20px;font-weight:900}
+.sbox span{font-size:12px;color:var(--muted);font-weight:800}
+label.f{display:block;font-size:13px;font-weight:900;color:var(--muted);margin:10px 0 4px}
+input.f{width:100%;border:2px solid var(--line);border-radius:12px;padding:11px 12px;font:inherit;font-size:15px;background:var(--soft)}
+input.f:focus{outline:none;border-color:#8DB2F8;background:#fff}
+.toggle{display:flex;justify-content:space-between;align-items:center;padding:12px 0;border-bottom:2px solid var(--soft)}
+.sw{width:52px;height:30px;border-radius:99px;background:#D5DCE7;border:none;position:relative;flex-shrink:0}
+.sw:after{content:"";position:absolute;top:3px;left:3px;width:24px;height:24px;border-radius:50%;background:#fff;transition:left .15s}
+.sw.on{background:var(--green)}.sw.on:after{left:25px}
+.goalbar{height:12px;background:#E5E9F0;border-radius:99px;overflow:hidden;margin-top:8px}
+.goalbar>div{height:100%;background:var(--gold)}
+/* modal */
+.modal{position:fixed;inset:0;background:rgba(20,30,50,.45);z-index:80;display:flex;align-items:flex-end;justify-content:center}
+.modal .sheet{background:#fff;width:100%;max-width:620px;border-radius:22px 22px 0 0;padding:22px 18px 26px;text-align:center}
+.modal h3{font-size:20px;font-weight:900;margin:8px 0 6px}
+.modal p{color:var(--muted);margin:0 0 18px}
+.modal .stack{display:flex;flex-direction:column;gap:12px}
+canvas#confetti{position:fixed;inset:0;pointer-events:none;z-index:90}
+a{color:var(--blue)}
+.kbd{font-size:12px;color:var(--muted);text-align:center;margin-top:12px}
+</style>
+</head>
+<body>
+<div class="app" id="app"></div>
+<canvas id="confetti"></canvas>
+<script>
+/* ===================== DATA: USCIS 2025 civics test (128 questions, form M-1778) =====================
+   f flags: s = 65/20 special consideration question, t = can be typed, c = changes with elections,
+   L = depends on where you live, k = how many answers needed */
+const Q = [
+{n:1,q:"What is the form of government of the United States?",a:["Republic","Constitution-based federal republic","Representative democracy"],d:["Constitutional monarchy","Dictatorship","Absolute monarchy"],t:1},
+{n:2,q:"What is the supreme law of the land?",a:["(U.S.) Constitution"],d:["Declaration of Independence","Bill of Rights","Articles of Confederation"],s:1,t:1},
+{n:3,q:"Name one thing the U.S. Constitution does.",a:["Forms the government","Defines powers of government","Defines the parts of government","Protects the rights of the people"],d:["Declares independence from Britain","Sets the prices of goods","Creates a state religion"]},
+{n:4,q:"The U.S. Constitution starts with the words “We the People.” What does “We the People” mean?",a:["Self-government","Popular sovereignty","Consent of the governed","People should govern themselves","(Example of) social contract"],d:["The President rules alone","Only landowners govern","Government by the military"]},
+{n:5,q:"How are changes made to the U.S. Constitution?",a:["Amendments","The amendment process"],d:["Presidential orders","Supreme Court votes","State referendums"],t:1},
+{n:6,q:"What does the Bill of Rights protect?",a:["(The basic) rights of Americans","(The basic) rights of people living in the United States"],d:["The powers of the President","The rights of the states only","The federal budget"]},
+{n:7,q:"How many amendments does the U.S. Constitution have?",a:["Twenty-seven (27)"],d:["Ten (10)","Twenty-five (25)","Thirty-three (33)"],s:1,t:1},
+{n:8,q:"Why is the Declaration of Independence important?",a:["It says America is free from British control","It says all people are created equal","It identifies inherent rights","It identifies individual freedoms"],d:["It created the U.S. Constitution","It ended the Civil War","It set up the Supreme Court"]},
+{n:9,q:"What founding document said the American colonies were free from Britain?",a:["Declaration of Independence"],d:["U.S. Constitution","Bill of Rights","Federalist Papers"],t:1},
+{n:10,q:"Name two important ideas from the Declaration of Independence and the U.S. Constitution.",a:["Equality","Liberty","Social contract","Natural rights","Limited government","Self-government"],d:["Monarchy","Unlimited government","Divine right of kings"],k:2},
+{n:11,q:"The words “Life, Liberty, and the pursuit of Happiness” are in what founding document?",a:["Declaration of Independence"],d:["U.S. Constitution","Bill of Rights","Emancipation Proclamation"],t:1},
+{n:12,q:"What is the economic system of the United States?",a:["Capitalism","Free market economy"],d:["Socialism","Communism","Feudalism"],s:1,t:1},
+{n:13,q:"What is the rule of law?",a:["Everyone must follow the law","Leaders must obey the law","Government must obey the law","No one is above the law"],d:["The President is above the law","Laws apply only to citizens","Judges can ignore the law"]},
+{n:14,q:"Many documents influenced the U.S. Constitution. Name one.",a:["Declaration of Independence","Articles of Confederation","Federalist Papers","Anti-Federalist Papers","Virginia Declaration of Rights","Fundamental Orders of Connecticut","Mayflower Compact","Iroquois Great Law of Peace"],d:["Emancipation Proclamation","Monroe Doctrine","Gettysburg Address"]},
+{n:15,q:"There are three branches of government. Why?",a:["So one part does not become too powerful","Checks and balances","Separation of powers"],d:["So the states can vote twice","To make laws faster","So the President can rule alone"]},
+{n:16,q:"Name the three branches of government.",a:["Legislative, executive, and judicial","Congress, president, and the courts"],d:["Federal, state, and local","Senate, House, and Cabinet","Army, Navy, and Air Force"]},
+{n:17,q:"The President of the United States is in charge of which branch of government?",a:["Executive branch"],d:["Legislative branch","Judicial branch","State branch"],t:1},
+{n:18,q:"What part of the federal government writes laws?",a:["(U.S.) Congress","(U.S. or national) legislature","Legislative branch"],d:["The President","The Supreme Court","The Cabinet"],t:1},
+{n:19,q:"What are the two parts of the U.S. Congress?",a:["Senate and House (of Representatives)"],d:["Senate and Supreme Court","House and Cabinet","Senate and Electoral College"]},
+{n:20,q:"Name one power of the U.S. Congress.",a:["Writes laws","Declares war","Makes the federal budget"],d:["Vetoes bills","Appoints federal judges","Commands the military"],s:1},
+{n:21,q:"How many U.S. senators are there?",a:["One hundred (100)"],d:["Fifty (50)","Four hundred thirty-five (435)","Two hundred (200)"],t:1},
+{n:22,q:"How long is a term for a U.S. senator?",a:["Six (6) years"],d:["Two (2) years","Four (4) years","Eight (8) years"],t:1},
+{n:23,q:"Who is one of your state’s U.S. senators now?",a:["Answers will vary. (D.C. and U.S. territory residents: D.C. or the territory has no U.S. senators.)"],L:"sen"},
+{n:24,q:"How many voting members are in the House of Representatives?",a:["Four hundred thirty-five (435)"],d:["One hundred (100)","Five hundred thirty-eight (538)","Four hundred fifty (450)"],t:1},
+{n:25,q:"How long is a term for a member of the House of Representatives?",a:["Two (2) years"],d:["Four (4) years","Six (6) years","One (1) year"],t:1},
+{n:26,q:"Why do U.S. representatives serve shorter terms than U.S. senators?",a:["To more closely follow public opinion"],d:["Because they have less work","Because the Senate chooses them","To save money on elections"]},
+{n:27,q:"How many senators does each state have?",a:["Two (2)"],d:["One (1)","Three (3)","It depends on population"],t:1},
+{n:28,q:"Why does each state have two senators?",a:["Equal representation (for small states)","The Great Compromise (Connecticut Compromise)"],d:["Because big states asked for it","To match the number of parties","Because of the Bill of Rights"]},
+{n:29,q:"Name your U.S. representative.",a:["Answers will vary. (Territory residents may give the name of their Delegate or Resident Commissioner, or say the territory has no voting representatives in Congress.)"],L:"rep"},
+{n:30,q:"What is the name of the Speaker of the House of Representatives now?",a:["Mike Johnson","Johnson"],d:["Chuck Schumer","Nancy Pelosi","John Thune"],s:1,t:1,c:1},
+{n:31,q:"Who does a U.S. senator represent?",a:["Citizens of their state","People of their state"],d:["Only citizens of their district","The President","Only members of their party"]},
+{n:32,q:"Who elects U.S. senators?",a:["Citizens from their state"],d:["The House of Representatives","The President","State governors"]},
+{n:33,q:"Who does a member of the House of Representatives represent?",a:["Citizens in their (congressional) district","People from their (congressional) district"],d:["All citizens of the state","Only their political party","The whole country"]},
+{n:34,q:"Who elects members of the House of Representatives?",a:["Citizens from their (congressional) district"],d:["The Senate","The state governor","The Electoral College"]},
+{n:35,q:"Some states have more representatives than other states. Why?",a:["(Because of) the state’s population","(Because) they have more people","(Because) some states have more people"],d:["Because they are older states","Because they have more land","Because they pay more taxes"]},
+{n:36,q:"The President of the United States is elected for how many years?",a:["Four (4) years"],d:["Two (2) years","Six (6) years","Eight (8) years"],s:1,t:1},
+{n:37,q:"The President of the United States can serve only two terms. Why?",a:["(Because of) the 22nd Amendment","To keep the president from becoming too powerful"],d:["Because of the 19th Amendment","Because of the Bill of Rights","Because the Senate votes on it"]},
+{n:38,q:"What is the name of the President of the United States now?",a:["Donald Trump","Donald J. Trump","Trump"],d:["Joe Biden","Barack Obama","JD Vance"],s:1,t:1,c:1},
+{n:39,q:"What is the name of the Vice President of the United States now?",a:["JD Vance","James David Vance","Vance"],d:["Kamala Harris","Mike Pence","Marco Rubio"],s:1,t:1,c:1},
+{n:40,q:"If the president can no longer serve, who becomes president?",a:["The Vice President (of the United States)"],d:["The Speaker of the House","The Chief Justice","The Secretary of State"],t:1},
+{n:41,q:"Name one power of the president.",a:["Signs bills into law","Vetoes bills","Enforces laws","Commander in Chief (of the military)","Chief diplomat","Appoints federal judges"],d:["Writes laws","Declares war","Decides if laws are constitutional"]},
+{n:42,q:"Who is Commander in Chief of the U.S. military?",a:["The President (of the United States)"],d:["The Secretary of War (Defense)","The Vice President","Congress"],t:1},
+{n:43,q:"Who signs bills to become laws?",a:["The President (of the United States)"],d:["The Vice President","The Chief Justice","The Speaker of the House"],t:1},
+{n:44,q:"Who vetoes bills?",a:["The President (of the United States)"],d:["The Supreme Court","The Senate","The Vice President"],s:1,t:1},
+{n:45,q:"Who appoints federal judges?",a:["The President (of the United States)"],d:["The Senate","The Chief Justice","The voters"],t:1},
+{n:46,q:"The executive branch has many parts. Name one.",a:["President (of the United States)","Cabinet","Federal departments and agencies"],d:["Supreme Court","Senate","House of Representatives"]},
+{n:47,q:"What does the President’s Cabinet do?",a:["Advises the President (of the United States)"],d:["Writes laws","Elects the President","Decides court cases"]},
+{n:48,q:"What are two Cabinet-level positions?",a:["Attorney General","Secretary of Agriculture","Secretary of Commerce","Secretary of Education","Secretary of Energy","Secretary of Health and Human Services","Secretary of Homeland Security","Secretary of Housing and Urban Development","Secretary of the Interior","Secretary of Labor","Secretary of State","Secretary of Transportation","Secretary of the Treasury","Secretary of Veterans Affairs","Secretary of War (Defense)","Vice President","Administrator of the Environmental Protection Agency","Administrator of the Small Business Administration","Director of the Central Intelligence Agency","Director of the Office of Management and Budget","Director of National Intelligence","United States Trade Representative"],d:["Speaker of the House","Chief Justice","Senate Majority Leader"],k:2},
+{n:49,q:"Why is the Electoral College important?",a:["It decides who is elected president","It provides a compromise between the popular election of the president and congressional selection"],d:["It writes the federal budget","It chooses Supreme Court justices","It decides state elections"]},
+{n:50,q:"What is one part of the judicial branch?",a:["Supreme Court","Federal Courts"],d:["Congress","The Cabinet","The Senate"],t:1},
+{n:51,q:"What does the judicial branch do?",a:["Reviews laws","Explains laws","Resolves disputes (disagreements) about the law","Decides if a law goes against the (U.S.) Constitution"],d:["Writes laws","Vetoes bills","Collects taxes"]},
+{n:52,q:"What is the highest court in the United States?",a:["Supreme Court"],d:["Federal Court of Appeals","Congress","State Supreme Court"],s:1,t:1},
+{n:53,q:"How many seats are on the Supreme Court?",a:["Nine (9)"],d:["Seven (7)","Twelve (12)","Fifteen (15)"],t:1,c:1},
+{n:54,q:"How many Supreme Court justices are usually needed to decide a case?",a:["Five (5)"],d:["Nine (9)","Three (3)","Seven (7)"],t:1},
+{n:55,q:"How long do Supreme Court justices serve?",a:["(For) life","Lifetime appointment","(Until) retirement"],d:["Ten (10) years","Six (6) years","Until the next election"],t:1},
+{n:56,q:"Supreme Court justices serve for life. Why?",a:["To be independent (of politics)","To limit outside (political) influence"],d:["To save money","Because they are elected","So the President can control them"]},
+{n:57,q:"Who is the Chief Justice of the United States now?",a:["John Roberts","John G. Roberts, Jr.","Roberts"],d:["Clarence Thomas","Sonia Sotomayor","Amy Coney Barrett"],t:1,c:1},
+{n:58,q:"Name one power that is only for the federal government.",a:["Print paper money","Mint coins","Declare war","Create an army","Make treaties","Set foreign policy"],d:["Give a driver’s license","Provide schooling and education","Approve zoning and land use"]},
+{n:59,q:"Name one power that is only for the states.",a:["Provide schooling and education","Provide protection (police)","Provide safety (fire departments)","Give a driver’s license","Approve zoning and land use"],d:["Print paper money","Declare war","Make treaties"]},
+{n:60,q:"What is the purpose of the 10th Amendment?",a:["(It states that the) powers not given to the federal government belong to the states or to the people"],d:["It gives the right to bear arms","It ends slavery","It gives women the right to vote"]},
+{n:61,q:"Who is the governor of your state now?",a:["Answers will vary. (D.C. residents: D.C. does not have a governor.)"],s:1,L:"gov"},
+{n:62,q:"What is the capital of your state?",a:["Answers will vary. (D.C. is not a state and has no capital. Territory residents name the territory’s capital.)"],L:"cap"},
+{n:63,q:"There are four amendments to the U.S. Constitution about who can vote. Describe one of them.",a:["Citizens eighteen (18) and older (can vote)","You don’t have to pay (a poll tax) to vote","Any citizen can vote (Women and men can vote)","A male citizen of any race (can vote)"],d:["Only landowners can vote","Citizens sixteen (16) and older can vote","Only people who pay a poll tax can vote"]},
+{n:64,q:"Who can vote in federal elections, run for federal office, and serve on a jury in the United States?",a:["Citizens","Citizens of the United States","U.S. citizens"],d:["Permanent residents","Anyone living in the U.S.","Visa holders"],t:1},
+{n:65,q:"What are three rights of everyone living in the United States?",a:["Freedom of expression","Freedom of speech","Freedom of assembly","Freedom to petition the government","Freedom of religion","The right to bear arms"],d:["The right to vote in federal elections","The right to serve on a jury","The right to run for federal office"],k:3},
+{n:66,q:"What do we show loyalty to when we say the Pledge of Allegiance?",a:["The United States","The flag"],d:["The President","Congress","Your state"],s:1,t:1},
+{n:67,q:"Name two promises that new citizens make in the Oath of Allegiance.",a:["Give up loyalty to other countries","Defend the (U.S.) Constitution","Obey the laws of the United States","Serve in the military (if needed)","Serve (help, do important work for) the nation (if needed)","Be loyal to the United States"],d:["Vote in every election","Join a political party","Never travel abroad"],k:2},
+{n:68,q:"How can people become United States citizens?",a:["Be born in the United States, under the conditions set by the 14th Amendment","Naturalize","Derive citizenship (under conditions set by Congress)"],d:["Pay a fee to the government","Buy property in the U.S.","Live in the U.S. for one year"]},
+{n:69,q:"What are two examples of civic participation in the United States?",a:["Vote","Run for office","Join a political party","Help with a campaign","Join a civic group","Join a community group","Give an elected official your opinion (on an issue)","Contact elected officials","Support or oppose an issue or policy","Write to a newspaper"],d:["Travel abroad","Buy a house","Watch a movie"],k:2},
+{n:70,q:"What is one way Americans can serve their country?",a:["Vote","Pay taxes","Obey the law","Serve in the military","Run for office","Work for local, state, or federal government"],d:["Travel abroad","Buy imported goods","Avoid jury duty"]},
+{n:71,q:"Why is it important to pay federal taxes?",a:["Required by law","All people pay to fund the federal government","Required by the (U.S.) Constitution (16th Amendment)","Civic duty"],d:["To get a tax refund","Only business owners must pay","To join a political party"]},
+{n:72,q:"It is important for all men age 18 through 25 to register for the Selective Service. Name one reason why.",a:["Required by law","Civic duty","Makes the draft fair, if needed"],d:["To get a driver’s license","To be allowed to travel","It is only for soldiers"]},
+{n:73,q:"The colonists came to America for many reasons. Name one.",a:["Freedom","Political liberty","Religious freedom","Economic opportunity","Escape persecution"],d:["To join the British army","To fight the Civil War","To escape the Great Depression"]},
+{n:74,q:"Who lived in America before the Europeans arrived?",a:["American Indians","Native Americans"],d:["The French","The Spanish","The Dutch"],s:1,t:1},
+{n:75,q:"What group of people was taken and sold as slaves?",a:["Africans","People from Africa"],d:["The British","The French","The Dutch"],t:1},
+{n:76,q:"What war did the Americans fight to win independence from Britain?",a:["American Revolution","The (American) Revolutionary War","War for (American) Independence"],d:["War of 1812","Civil War","French and Indian War"],t:1},
+{n:77,q:"Name one reason why the Americans declared independence from Britain.",a:["High taxes","Taxation without representation","British soldiers stayed in Americans’ houses (boarding, quartering)","They did not have self-government","Boston Massacre","Boston Tea Party (Tea Act)","Stamp Act","Sugar Act","Townshend Acts","Intolerable (Coercive) Acts"],d:["The Civil War","The Louisiana Purchase","The Emancipation Proclamation"]},
+{n:78,q:"Who wrote the Declaration of Independence?",a:["(Thomas) Jefferson"],d:["George Washington","Benjamin Franklin","John Adams"],s:1,t:1},
+{n:79,q:"When was the Declaration of Independence adopted?",a:["July 4, 1776"],d:["July 4, 1787","September 17, 1787","July 4, 1781"],t:1},
+{n:80,q:"The American Revolution had many important events. Name one.",a:["(Battle of) Bunker Hill","Declaration of Independence","Washington Crossing the Delaware (Battle of Trenton)","(Battle of) Saratoga","Valley Forge (Encampment)","(Battle of) Yorktown (British surrender at Yorktown)"],d:["Battle of Gettysburg","Attack on Pearl Harbor","Battle of Antietam"]},
+{n:81,q:"There were 13 original states. Name five.",a:["New Hampshire","Massachusetts","Rhode Island","Connecticut","New York","New Jersey","Pennsylvania","Delaware","Maryland","Virginia","North Carolina","South Carolina","Georgia"],d:["Vermont","Maine","Florida","Ohio","Kentucky"],k:5},
+{n:82,q:"What founding document was written in 1787?",a:["(U.S.) Constitution"],d:["Declaration of Independence","Bill of Rights","Articles of Confederation"],t:1},
+{n:83,q:"The Federalist Papers supported the passage of the U.S. Constitution. Name one of the writers.",a:["(James) Madison","(Alexander) Hamilton","(John) Jay","Publius"],d:["Thomas Jefferson","George Washington","Benjamin Franklin"],t:1},
+{n:84,q:"Why were the Federalist Papers important?",a:["They helped people understand the (U.S.) Constitution","They supported passing the (U.S.) Constitution"],d:["They declared independence","They ended slavery","They created the Electoral College"]},
+{n:85,q:"Benjamin Franklin is famous for many things. Name one.",a:["Founded the first free public libraries","First Postmaster General of the United States","Helped write the Declaration of Independence","Inventor","U.S. diplomat"],d:["First president of the United States","Bought the Louisiana Territory","Father of the Constitution"]},
+{n:86,q:"George Washington is famous for many things. Name one.",a:["“Father of Our Country”","First president of the United States","General of the Continental Army","President of the Constitutional Convention"],d:["Wrote the Declaration of Independence","Freed the slaves","Father of the Constitution"],s:1},
+{n:87,q:"Thomas Jefferson is famous for many things. Name one.",a:["Writer of the Declaration of Independence","Third president of the United States","Doubled the size of the United States (Louisiana Purchase)","First Secretary of State","Founded the University of Virginia","Writer of the Virginia Statute on Religious Freedom"],d:["First president of the United States","Father of the Constitution","First Secretary of the Treasury"]},
+{n:88,q:"James Madison is famous for many things. Name one.",a:["“Father of the Constitution”","Fourth president of the United States","President during the War of 1812","One of the writers of the Federalist Papers"],d:["First president of the United States","Writer of the Declaration of Independence","First Postmaster General"]},
+{n:89,q:"Alexander Hamilton is famous for many things. Name one.",a:["First Secretary of the Treasury","One of the writers of the Federalist Papers","Helped establish the First Bank of the United States","Aide to General George Washington","Member of the Continental Congress"],d:["Third president of the United States","Writer of the Declaration of Independence","President during the Civil War"]},
+{n:90,q:"What territory did the United States buy from France in 1803?",a:["Louisiana Territory","Louisiana"],d:["Florida","Alaska","Texas"],t:1},
+{n:91,q:"Name one war fought by the United States in the 1800s.",a:["War of 1812","Mexican-American War","Civil War","Spanish-American War"],d:["World War I","Korean War","Revolutionary War"],t:1},
+{n:92,q:"Name the U.S. war between the North and the South.",a:["The Civil War"],d:["War of 1812","Revolutionary War","Mexican-American War"],t:1},
+{n:93,q:"The Civil War had many important events. Name one.",a:["(Battle of) Fort Sumter","Emancipation Proclamation","(Battle of) Vicksburg","(Battle of) Gettysburg","Sherman’s March","(Surrender at) Appomattox","(Battle of) Antietam/Sharpsburg","Lincoln was assassinated"],d:["Battle of Bunker Hill","Attack on Pearl Harbor","Battle of Yorktown"]},
+{n:94,q:"Abraham Lincoln is famous for many things. Name one.",a:["Freed the slaves (Emancipation Proclamation)","Saved (or preserved) the Union","Led the United States during the Civil War","16th president of the United States","Delivered the Gettysburg Address"],d:["First president of the United States","Wrote the Declaration of Independence","Bought the Louisiana Territory"],s:1},
+{n:95,q:"What did the Emancipation Proclamation do?",a:["Freed the slaves","Freed slaves in the Confederacy","Freed slaves in the Confederate states","Freed slaves in most Southern states"],d:["Ended the Revolutionary War","Gave women the right to vote","Created the Confederacy"]},
+{n:96,q:"What U.S. war ended slavery?",a:["The Civil War"],d:["Revolutionary War","War of 1812","World War I"],t:1},
+{n:97,q:"What amendment says all persons born or naturalized in the United States, and subject to the jurisdiction thereof, are U.S. citizens?",a:["14th Amendment"],d:["19th Amendment","1st Amendment","22nd Amendment"],t:1},
+{n:98,q:"When did all men get the right to vote?",a:["After the Civil War","During Reconstruction","(With the) 15th Amendment","1870"],d:["1776","After World War II","With the 19th Amendment"]},
+{n:99,q:"Name one leader of the women’s rights movement in the 1800s.",a:["Susan B. Anthony","Elizabeth Cady Stanton","Sojourner Truth","Harriet Tubman","Lucretia Mott","Lucy Stone"],d:["Martin Luther King, Jr.","Betsy Ross","Eleanor Roosevelt"],t:1},
+{n:100,q:"Name one war fought by the United States in the 1900s.",a:["World War I","World War II","Korean War","Vietnam War","(Persian) Gulf War"],d:["Civil War","War of 1812","Revolutionary War"],t:1},
+{n:101,q:"Why did the United States enter World War I?",a:["Because Germany attacked U.S. (civilian) ships","To support the Allied Powers (England, France, Italy, and Russia)","To oppose the Central Powers (Germany, Austria-Hungary, the Ottoman Empire, and Bulgaria)"],d:["Because Japan attacked Pearl Harbor","To stop the spread of communism","To force Iraq out of Kuwait"]},
+{n:102,q:"When did all women get the right to vote?",a:["1920","After World War I","(With the) 19th Amendment"],d:["1870","1776","With the 15th Amendment"],t:1},
+{n:103,q:"What was the Great Depression?",a:["Longest economic recession in modern history"],d:["A war between the North and South","A period of fast economic growth","A drought in one state"]},
+{n:104,q:"When did the Great Depression start?",a:["The Great Crash (1929)","Stock market crash of 1929"],d:["Attack on Pearl Harbor (1941)","End of World War I (1918)","The War of 1812"]},
+{n:105,q:"Who was president during the Great Depression and World War II?",a:["(Franklin) Roosevelt"],d:["Woodrow Wilson","Dwight Eisenhower","Abraham Lincoln"],t:1},
+{n:106,q:"Why did the United States enter World War II?",a:["(Bombing of) Pearl Harbor","Japanese attacked Pearl Harbor","To support the Allied Powers (England, France, and Russia)","To oppose the Axis Powers (Germany, Italy, and Japan)"],d:["Germany attacked U.S. ships in 1917","To stop communism in Korea","To force Iraq out of Kuwait"]},
+{n:107,q:"Dwight Eisenhower is famous for many things. Name one.",a:["General during World War II","President at the end of (during) the Korean War","34th president of the United States","Signed the Federal-Aid Highway Act of 1956 (Created the Interstate System)"],d:["16th president of the United States","President during the Great Depression","Wrote the Federalist Papers"]},
+{n:108,q:"Who was the United States’ main rival during the Cold War?",a:["Soviet Union","USSR","Russia"],d:["Great Britain","Mexico","France"],t:1},
+{n:109,q:"During the Cold War, what was one main concern of the United States?",a:["Communism","Nuclear war"],d:["Slavery","The Great Depression","British taxes"],t:1},
+{n:110,q:"Why did the United States enter the Korean War?",a:["To stop the spread of communism"],d:["Because Japan attacked Pearl Harbor","To free Kuwait","To win independence from Britain"]},
+{n:111,q:"Why did the United States enter the Vietnam War?",a:["To stop the spread of communism"],d:["Because Germany attacked U.S. ships","To free Kuwait","Because of the September 11 attacks"]},
+{n:112,q:"What did the civil rights movement do?",a:["Fought to end racial discrimination"],d:["Fought for independence from Britain","Fought to end the Great Depression","Fought to stop communism"]},
+{n:113,q:"Martin Luther King, Jr. is famous for many things. Name one.",a:["Fought for civil rights","Worked for equality for all Americans","Worked to ensure that people would “not be judged by the color of their skin, but by the content of their character”"],d:["Freed the slaves","First Postmaster General","Wrote the Federalist Papers"],s:1},
+{n:114,q:"Why did the United States enter the Persian Gulf War?",a:["To force the Iraqi military from Kuwait"],d:["To stop the spread of communism","Because Japan attacked Pearl Harbor","Because of the September 11 attacks"]},
+{n:115,q:"What major event happened on September 11, 2001 in the United States?",a:["Terrorists attacked the United States","Terrorists took over two planes and crashed them into the World Trade Center in New York City","Terrorists took over a plane and crashed into the Pentagon in Arlington, Virginia","Terrorists took over a plane originally aimed at Washington, D.C., and crashed in a field in Pennsylvania"],d:["Japan attacked Pearl Harbor","The stock market crashed","The Cold War began"],s:1},
+{n:116,q:"Name one U.S. military conflict after the September 11, 2001 attacks.",a:["(Global) War on Terror","War in Afghanistan","War in Iraq"],d:["Vietnam War","Korean War","Persian Gulf War"],t:1},
+{n:117,q:"Name one American Indian tribe in the United States.",a:["Apache","Blackfeet","Cayuga","Cherokee","Cheyenne","Chippewa","Choctaw","Creek","Crow","Hopi","Huron","Inupiat","Lakota","Mohawk","Mohegan","Navajo","Oneida","Onondaga","Pueblo","Seminole","Seneca","Shawnee","Sioux","Teton","Tuscarora"],d:["Aztec","Inca","Maya"],t:1,note:"For a complete list, visit bia.gov."},
+{n:118,q:"Name one example of an American innovation.",a:["Light bulb","Automobile (cars, internal combustion engine)","Skyscrapers","Airplane","Assembly line","Landing on the moon","Integrated circuit (IC)"],d:["The printing press","Gunpowder","The compass"],t:1},
+{n:119,q:"What is the capital of the United States?",a:["Washington, D.C."],d:["New York City","Philadelphia","Boston"],t:1},
+{n:120,q:"Where is the Statue of Liberty?",a:["New York (Harbor)","Liberty Island","[Also acceptable: New Jersey, near New York City, and on the Hudson (River).]"],d:["Boston Harbor","San Francisco Bay","Washington, D.C."],t:1},
+{n:121,q:"Why does the flag have 13 stripes?",a:["(Because there were) 13 original colonies","(Because the stripes) represent the original colonies"],d:["For the first 13 amendments","For the first 13 presidents","For 13 battles of the Revolution"],s:1},
+{n:122,q:"Why does the flag have 50 stars?",a:["(Because there is) one star for each state","(Because) each star represents a state","(Because there are) 50 states"],d:["One star for each president","For the 50 original colonies","One star for each amendment"]},
+{n:123,q:"What is the name of the national anthem?",a:["The Star-Spangled Banner"],d:["America the Beautiful","God Bless America","My Country, ’Tis of Thee"],t:1},
+{n:124,q:"The Nation’s first motto was “E Pluribus Unum.” What does that mean?",a:["Out of many, one","We all become one"],d:["In God we trust","Liberty for all","United we stand"],t:1},
+{n:125,q:"What is Independence Day?",a:["A holiday to celebrate U.S. independence (from Britain)","The country’s birthday"],d:["A holiday to honor veterans","A holiday to celebrate the harvest","The day the Constitution was signed"]},
+{n:126,q:"Name three national U.S. holidays.",a:["New Year’s Day","Martin Luther King, Jr. Day","Presidents Day (Washington’s Birthday)","Memorial Day","Juneteenth","Independence Day","Labor Day","Columbus Day","Veterans Day","Thanksgiving Day","Christmas Day"],d:["Halloween","Valentine’s Day","Easter","St. Patrick’s Day"],s:1,k:3},
+{n:127,q:"What is Memorial Day?",a:["A holiday to honor soldiers who died in military service"],d:["A holiday to celebrate U.S. independence","A holiday to honor everyone who has served in the military","A holiday to honor workers"]},
+{n:128,q:"What is Veterans Day?",a:["A holiday to honor people in the (U.S.) military","A holiday to honor people who have served (in the U.S. military)"],d:["A holiday to honor soldiers who died in military service","A holiday to honor workers","A holiday to celebrate the Constitution"]}
+];
+const QBY = {}; Q.forEach(x=>QBY[x.n]=x);
+const LOCAL = {sen:{label:"Your U.S. senators",fields:["sen1","sen2"]},rep:{label:"Your U.S. representative",fields:["rep"]},gov:{label:"Your governor",fields:["gov"]},cap:{label:"Your state capital",fields:["cap"]}};
+
+const UNITS = [
+ {t:"Principles of Government",s:"The Constitution & founding ideas",r:[1,15],c:"#2F6FED",d:"#1E4FB8"},
+ {t:"Congress",s:"Senators, representatives & the Speaker",r:[16,35],c:"#E5484D",d:"#B5303A"},
+ {t:"The President",s:"Executive branch & the Cabinet",r:[36,49],c:"#7B5CE0",d:"#5A3DBA"},
+ {t:"Courts & the States",s:"Judicial branch & federalism",r:[50,62],c:"#0FA3A3",d:"#0A7A7A"},
+ {t:"Rights & Responsibilities",s:"Voting, the Oath & civic duty",r:[63,72],c:"#F28C28",d:"#C46A12"},
+ {t:"Colonies & Independence",s:"1600s to the Constitution",r:[73,89],c:"#1F3A6B",d:"#12264A"},
+ {t:"The 1800s",s:"Louisiana, Civil War & suffrage",r:[90,99],c:"#3DA35D",d:"#2A7C44"},
+ {t:"Modern America",s:"World wars to today",r:[100,118],c:"#D6457A",d:"#A92E5C"},
+ {t:"Symbols & Holidays",s:"Flag, anthem & national holidays",r:[119,128],c:"#C58B00",d:"#946800"}
+];
+// Build lessons: each unit split into lessons of ~5-6, plus a unit review.
+const NODES = [];
+UNITS.forEach((u,ui)=>{
+  const ids=[]; for(let i=u.r[0];i<=u.r[1];i++) ids.push(i);
+  u.ids=ids;
+  const nL=Math.ceil(ids.length/6), size=Math.ceil(ids.length/nL);
+  u.nodes=[];
+  for(let l=0;l<nL;l++){
+    const node={id:`u${ui}l${l}`,unit:ui,type:"lesson",idx:l,qs:ids.slice(l*size,(l+1)*size)};
+    NODES.push(node); u.nodes.push(node);
+  }
+  const rv={id:`u${ui}r`,unit:ui,type:"review",qs:ids}; NODES.push(rv); u.nodes.push(rv);
+});
+
+/* ===================== STATE ===================== */
+const KEY="civicquest-v1";
+const today=()=>{const d=new Date();return d.getFullYear()+"-"+(d.getMonth()+1)+"-"+d.getDate()};
+const DEF={xp:0,streak:0,last:null,done:{},m:{},wrong:{},day:{d:null,xp:0},set:{sound:true,order:false,speak:false},my:{sen1:"",sen2:"",rep:"",gov:"",cap:""},best:{},lessons:0};
+let S;
+try{S=Object.assign({},DEF,JSON.parse(localStorage.getItem(KEY)||"{}"));}catch(e){S=JSON.parse(JSON.stringify(DEF));}
+S.set=Object.assign({},DEF.set,S.set||{});S.my=Object.assign({},DEF.my,S.my||{});
+function save(){try{localStorage.setItem(KEY,JSON.stringify(S));}catch(e){}}
+function dayXP(){return S.day&&S.day.d===today()?S.day.xp:0}
+function streakNow(){ if(!S.last) return 0; const y=new Date();y.setDate(y.getDate()-1);const ys=y.getFullYear()+"-"+(y.getMonth()+1)+"-"+y.getDate(); return (S.last===today()||S.last===ys)?S.streak:0;}
+function addXP(n){S.xp+=n; if(!S.day||S.day.d!==today()) S.day={d:today(),xp:0}; S.day.xp+=n;
+  const t=today(); if(S.last!==t){const y=new Date();y.setDate(y.getDate()-1);const ys=y.getFullYear()+"-"+(y.getMonth()+1)+"-"+y.getDate(); S.streak=(S.last===ys)?S.streak+1:1; S.last=t;}
+  save();}
+const GOAL=30;
+
+/* ===================== HELPERS ===================== */
+const $=s=>document.querySelector(s);
+const esc=s=>String(s).replace(/[&<>"]/g,c=>({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;"}[c]));
+const shuffle=a=>{a=a.slice();for(let i=a.length-1;i>0;i--){const j=Math.floor(Math.random()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a};
+const sample=(a,k)=>shuffle(a).slice(0,k);
+function isLocal(q){return !!q.L}
+function localAnswers(q){return LOCAL[q.L].fields.map(f=>S.my[f]).filter(Boolean)}
+function localReady(q){return localAnswers(q).length>0}
+function displayAns(a){return a.replace(/^\[|\]$/g,"")}
+
+// ---- fuzzy typed-answer matching ----
+function norm(s){return s.toLowerCase().replace(/[’']/g,"").replace(/&/g," and ").replace(/\bu\.?\s?s\.?\b/g," us ").replace(/[^a-z0-9 ]/g," ").replace(/\b(the|a|an|of|us|united states|because|for|with|its|it)\b/g," ").replace(/\s+/g," ").trim()}
+function variants(ans){const v=new Set();
+  v.add(norm(ans.replace(/[()\[\]]/g," ")));
+  v.add(norm(ans.replace(/\([^)]*\)/g," ")));
+  const num=ans.match(/\((\d+)\)/); if(num){ v.add(num[1]); v.add(norm(ans.replace(/^[^(]*\((\d+)\)/,"$1"))); }
+  ans.split(/[,/]| or /).forEach(p=>{const n=norm(p.replace(/\([^)]*\)/g," "));if(n.length>3&&ans.includes("/"))v.add(n)});
+  v.delete(""); return [...v];}
+function lev(a,b){const m=a.length,n=b.length;if(!m)return n;if(!n)return m;let p=Array(n+1).fill(0).map((_,i)=>i);for(let i=1;i<=m;i++){let c=[i];for(let j=1;j<=n;j++)c[j]=Math.min(p[j]+1,c[j-1]+1,p[j-1]+(a[i-1]===b[j-1]?0:1));p=c}return p[n]}
+function matches(input,answers){const x=norm(input); if(!x) return false;
+  const dx=(x.match(/\d+/g)||[]).join(",");
+  for(const a of answers){for(const v of variants(a)){
+    if(x===v) return true;
+    const dv=(v.match(/\d+/g)||[]).join(","); if((dx||dv)&&dx!==dv) continue;
+    if(v.length>=4 && lev(x,v)<=Math.max(1,Math.floor(v.length*0.2))) return true;
+    if(v.length>=5 && (" "+x+" ").includes(" "+v+" ")) return true;
+  }} return false;}
+
+/* ===================== SOUND & SPEECH ===================== */
+let AC=null;
+function tone(seq){ if(!S.set.sound) return; try{ AC=AC||new (window.AudioContext||window.webkitAudioContext)(); let t=AC.currentTime;
+  seq.forEach(([f,d,type])=>{const o=AC.createOscillator(),g=AC.createGain();o.type=type||"sine";o.frequency.value=f;g.gain.setValueAtTime(.0001,t);g.gain.exponentialRampToValueAtTime(.18,t+.02);g.gain.exponentialRampToValueAtTime(.0001,t+d);o.connect(g);g.connect(AC.destination);o.start(t);o.stop(t+d+.02);t+=d*.8;}); }catch(e){} }
+const SND={ok:()=>tone([[660,.12],[880,.18]]),bad:()=>tone([[220,.18,"square"],[180,.22,"square"]]),win:()=>tone([[523,.12],[659,.12],[784,.12],[1047,.3]]),tap:()=>tone([[500,.05]])};
+function speak(text){try{const s=window.speechSynthesis;if(!s)return;s.cancel();const u=new SpeechSynthesisUtterance(text);u.lang="en-US";u.rate=.95;s.speak(u);}catch(e){}}
+
+/* ===================== ICONS & MASCOT ===================== */
+const I={
+ fire:`<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2s5 5 5 10a5 5 0 0 1-10 0c0-2 1-3.5 2-4.5 0 2 1 3 2 3 0-3 1-6 1-8.5z"/><path fill="#FFD36B" d="M12 13s2 1.6 2 3.2a2 2 0 0 1-4 0c0-1 .7-1.8 2-3.2z"/></svg>`,
+ gem:`<svg viewBox="0 0 24 24"><path fill="currentColor" d="M6 3h12l4 6-10 12L2 9z"/><path fill="#fff" opacity=".35" d="M6 3l3 6H2zM12 21L9 9h6z"/></svg>`,
+ heart:`<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 21s-8-5.3-8-11a4.5 4.5 0 0 1 8-2.8A4.5 4.5 0 0 1 20 10c0 5.7-8 11-8 11z"/><path fill="#fff" opacity=".35" d="M7.5 7.5a2 2 0 0 1 2-1"/></svg>`,
+ star:`<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 2.5l2.9 6 6.6.9-4.8 4.6 1.2 6.5L12 17.4l-5.9 3.1 1.2-6.5L2.5 9.4l6.6-.9z"/></svg>`,
+ lock:`<svg viewBox="0 0 24 24"><path fill="currentColor" d="M7 10V8a5 5 0 0 1 10 0v2h1a1 1 0 0 1 1 1v9a1 1 0 0 1-1 1H6a1 1 0 0 1-1-1v-9a1 1 0 0 1 1-1zm2 0h6V8a3 3 0 0 0-6 0z"/></svg>`,
+ check:`<svg viewBox="0 0 24 24"><path fill="none" stroke="currentColor" stroke-width="3.4" stroke-linecap="round" stroke-linejoin="round" d="M5 12.5l4.5 4.5L19 7.5"/></svg>`,
+ trophy:`<svg viewBox="0 0 24 24"><path fill="currentColor" d="M7 3h10v2h3v3a4 4 0 0 1-4 4h-.3A5 5 0 0 1 13 15v3h3v3H8v-3h3v-3a5 5 0 0 1-2.7-3H8a4 4 0 0 1-4-4V5h3zm-1 4v1a2 2 0 0 0 1.2 1.8A6 6 0 0 1 7 8V7zm11 0v1c0 .6-.1 1.2-.2 1.8A2 2 0 0 0 18 8V7z"/></svg>`,
+ x:`<svg viewBox="0 0 24 24"><path stroke="currentColor" stroke-width="3" stroke-linecap="round" d="M6 6l12 12M18 6L6 18"/></svg>`,
+ vol:`<svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 9h4l5-4v14l-5-4H4z"/><path fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" d="M16 9a4 4 0 0 1 0 6M18.5 6.5a7.5 7.5 0 0 1 0 11"/></svg>`,
+ home:`<svg viewBox="0 0 24 24"><path fill="currentColor" d="M12 3l9 8h-3v9h-5v-6h-2v6H6v-9H3z"/></svg>`,
+ dumbbell:`<svg viewBox="0 0 24 24"><path fill="currentColor" d="M2 10h2V7h3v10H4v-3H2zm20 0h-2V7h-3v10h3v-3h2zM8 11h8v2H8z"/></svg>`,
+ book:`<svg viewBox="0 0 24 24"><path fill="currentColor" d="M4 4h6a3 3 0 0 1 2 1 3 3 0 0 1 2-1h6v15h-6a2 2 0 0 0-2 1 2 2 0 0 0-2-1H4z"/><path fill="#fff" opacity=".4" d="M12 6v13"/></svg>`,
+ user:`<svg viewBox="0 0 24 24"><circle cx="12" cy="8" r="4.2" fill="currentColor"/><path fill="currentColor" d="M3.5 21a8.5 8.5 0 0 1 17 0z"/></svg>`,
+ mic:`<svg viewBox="0 0 24 24"><rect x="9" y="3" width="6" height="11" rx="3" fill="currentColor"/><path fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" d="M6 11a6 6 0 0 0 12 0M12 17v4"/></svg>`,
+ bolt:`<svg viewBox="0 0 24 24"><path fill="currentColor" d="M13 2L4 14h6l-1 8 9-12h-6z"/></svg>`,
+ target:`<svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="12" cy="12" r="5" fill="none" stroke="currentColor" stroke-width="2.5"/><circle cx="12" cy="12" r="1.8" fill="currentColor"/></svg>`,
+ cards:`<svg viewBox="0 0 24 24"><rect x="3" y="6" width="13" height="15" rx="2" fill="currentColor" opacity=".55"/><rect x="8" y="3" width="13" height="15" rx="2" fill="currentColor"/></svg>`,
+ flag:`<svg viewBox="0 0 24 24"><path fill="currentColor" d="M5 2h2v20H5z"/><path fill="currentColor" d="M8 4h12l-3 4 3 4H8z"/></svg>`
+};
+function eagle(mood){ // original mascot "Libby" the bald eagle
+  const mouth = mood==="sad" ? `<path d="M50 63 q6 -4 12 0" stroke="#7A4B00" stroke-width="2.4" fill="none" stroke-linecap="round"/>` : "";
+  const eyes = mood==="happy"
+   ? `<path d="M41 44 q5 -6 10 0" stroke="#24324A" stroke-width="3.4" fill="none" stroke-linecap="round"/><path d="M61 44 q5 -6 10 0" stroke="#24324A" stroke-width="3.4" fill="none" stroke-linecap="round"/>`
+   : `<ellipse cx="46" cy="44" rx="5" ry="6" fill="#24324A"/><ellipse cx="66" cy="44" rx="5" ry="6" fill="#24324A"/><circle cx="47.5" cy="42" r="1.8" fill="#fff"/><circle cx="67.5" cy="42" r="1.8" fill="#fff"/>`;
+  return `<svg viewBox="0 0 112 120" xmlns="http://www.w3.org/2000/svg">
+   <ellipse cx="56" cy="114" rx="30" ry="5" fill="#000" opacity=".08"/>
+   <path d="M18 70 q-12 18 2 34 q8 -6 14 -18z" fill="#6B3F1D"/><path d="M94 70 q12 18 -2 34 q-8 -6 -14 -18z" fill="#6B3F1D"/>
+   <ellipse cx="56" cy="84" rx="32" ry="28" fill="#7A4B2A"/>
+   <ellipse cx="56" cy="90" rx="19" ry="17" fill="#9A6740"/>
+   <path d="M44 108 l-4 8 M48 108 l0 8 M52 108 l3 7" stroke="#E8A400" stroke-width="3.2" stroke-linecap="round"/>
+   <path d="M60 108 l-3 7 M64 108 l0 8 M68 108 l4 8" stroke="#E8A400" stroke-width="3.2" stroke-linecap="round"/>
+   <path d="M20 46 q0 -34 36 -34 q36 0 36 34 q0 22 -36 24 q-36 -2 -36 -24z" fill="#FFFFFF" stroke="#E3E8F0" stroke-width="2"/>
+   <path d="M34 20 q-6 -10 2 -14 q2 8 8 10z" fill="#FFFFFF" stroke="#E3E8F0" stroke-width="2"/>
+   ${eyes}
+   <path d="M45 52 q11 -6 22 0 q-2 12 -11 16 q-9 -4 -11 -16z" fill="#FFC23D" stroke="#E09A00" stroke-width="2"/>
+   ${mouth}
+   <circle cx="36" cy="54" r="4" fill="#FFB3B3" opacity=".6"/><circle cx="76" cy="54" r="4" fill="#FFB3B3" opacity=".6"/>
+   <path d="M30 76 h52 v6 h-52z" fill="#2F6FED"/><path d="M53 74 l3 -3 l3 3 l-3 10z" fill="#E5484D"/>
+  </svg>`;}
+
+/* ===================== ROUTING ===================== */
+let TAB="learn", studyUnit=-1, studyQuery="";
+function render(){
+  const app=$("#app");
+  app.innerHTML = topbar() + `<main id="main">${TAB==="learn"?learnView():TAB==="practice"?practiceView():TAB==="study"?studyView():profileView()}</main>` + navbar();
+  bind();
+  if(TAB==="learn"){const cur=document.querySelector(".start-tip"); if(cur && !render.scrolled){render.scrolled=1; cur.scrollIntoView({block:"center"});}}
+}
+function topbar(){
+  return `<div class="topbar"><div class="brand">${eagle()}<span>CivicQuest</span></div>
+  <div class="stats"><div class="stat fire" title="Day streak">${I.fire}${streakNow()}</div><div class="stat gem" title="Total XP">${I.gem}${S.xp}</div><div class="stat goal" title="Today's XP">${I.bolt}${dayXP()}/${GOAL}</div></div></div>`;
+}
+function navbar(){
+  const b=(id,ic,l)=>`<button data-tab="${id}" class="${TAB===id?"on":""}">${ic}<span>${l}</span></button>`;
+  return `<nav class="nav">${b("learn",I.home,"Learn")}${b("practice",I.dumbbell,"Practice")}${b("study",I.book,"Study")}${b("profile",I.user,"Profile")}</nav>`;
+}
+
+/* ===================== LEARN (path) ===================== */
+function nodeUnlocked(i){ if(!S.set.order||i===0) return true; return !!S.done[NODES[i-1].id]; }
+function learnView(){
+  let html="", gi=0, curFound=false;
+  const mastered=Q.filter(q=>(S.m[q.n]||0)>=2).length;
+  html+=`<div class="card" style="display:flex;gap:14px;align-items:center;margin-top:4px">
+    <div style="width:70px;flex-shrink:0">${eagle(dayXP()>=GOAL?"happy":"")}</div>
+    <div style="flex:1"><h4>${dayXP()>=GOAL?"Daily goal complete! 🎉":"Today’s goal: "+GOAL+" XP"}</h4>
+    <p>${mastered} of 128 questions mastered. The real test asks 20 — you need 12 right.</p>
+    <div class="goalbar"><div style="width:${Math.min(100,dayXP()/GOAL*100)}%"></div></div></div></div>`;
+  UNITS.forEach((u,ui)=>{
+    const doneN=u.nodes.filter(n=>S.done[n.id]).length;
+    html+=`<div class="unit" style="background:${u.c}"><div><h3>Unit ${ui+1} · Q${u.r[0]}–${u.r[1]}</h3><h2>${u.t}</h2><div class="sub">${u.s} · ${doneN}/${u.nodes.length} done</div></div><button data-studyunit="${ui}">${"Guide"}</button></div><div class="path">`;
+    u.nodes.forEach((n,li)=>{
+      const i=NODES.indexOf(n), open=nodeUnlocked(i), done=!!S.done[n.id];
+      const isCur=open&&!done&&!curFound; if(isCur) curFound=true;
+      const off=Math.round(Math.sin(li*1.1)*70);
+      const cls=done?"done":open?"open":"locked";
+      const style=cls==="open"?`background:${u.c};box-shadow:0 7px 0 ${u.d}`:"";
+      const icon = n.type==="review" ? I.trophy : done ? I.check : open ? I.star : I.lock;
+      const label = n.type==="review" ? "Unit review" : `Lesson ${n.idx+1}`;
+      html+=`<div class="node-wrap" style="transform:translateX(${off}px)">${isCur?`<div class="start-tip">START</div><div class="ring"></div>`:""}
+        <button class="node ${cls}" style="${style}" data-node="${n.id}" ${open?"":"disabled"} aria-label="${label}">${icon}</button>
+        <div class="node-label">${label}</div></div>`;
+      gi++;
+    });
+    html+=`</div>`;
+  });
+  html+=`<div class="card" style="text-align:center;margin-top:24px">${I.flag.replace('<svg','<svg style="width:40px;height:40px;color:var(--red)"')}<h4>Ready for the real thing?</h4><p style="margin-bottom:12px">Take a full mock interview: 20 questions, 12 to pass.</p><button class="btn gold" data-mock="mc">Start mock interview</button></div>`;
+  return html;
+}
+
+/* ===================== PRACTICE ===================== */
+function practiceView(){
+  const wrongN=Object.keys(S.wrong).length;
+  const item=(ic,bg,col,title,desc,attr,dis)=>`<button class="card" style="width:100%;text-align:left;font:inherit;${dis?"opacity:.55":""}" ${attr} ${dis?"disabled":""}><div class="row"><div class="icon-tile" style="background:${bg};color:${col}">${ic}</div><div><h4>${title}</h4><p>${desc}</p></div></div></button>`;
+  return `<h1 class="page">Practice</h1>
+   ${item(I.flag,"#FFF2CC","#C58B00","Mock interview","20 random questions, multiple choice. Stops at 12 correct (pass) or 9 wrong — just like the officer.",'data-mock="mc"')}
+   ${item(I.mic,"#E6EEFF","#2F6FED","Oral mock interview","The real test is spoken. Hear each question, answer out loud, then reveal and grade yourself.",'data-mock="oral"')}
+   ${item(I.star,"#FFF2CC","#C58B00","65/20 special test","For applicants 65+ with 20 years as a permanent resident: 10 of the 20 starred questions, 6 to pass.",'data-mock="six"')}
+   ${item(I.target,"#FFE3E3","#E5484D","Fix my mistakes",wrongN?`${wrongN} question${wrongN>1?"s":""} you missed recently. Get each right to clear it.`:"No mistakes to review yet — nice work!",'data-practice="wrong"',!wrongN)}
+   ${item(I.bolt,"#DDF7E3","#2A9545","Quick 10","10 random questions from across all 128.",'data-practice="rand"')}
+   ${item(I.cards,"#EDE7FF","#7B5CE0","Flashcards","Flip through every question and answer at your own pace.",'data-flash="-1"')}`;
+}
+
+/* ===================== STUDY ===================== */
+function studyView(){
+  const qy=studyQuery.toLowerCase();
+  let list=Q.filter(q=>studyUnit<0||(q.n>=UNITS[studyUnit].r[0]&&q.n<=UNITS[studyUnit].r[1]));
+  if(studyUnit===-2) list=Q.filter(q=>q.s);
+  if(qy) list=list.filter(q=>(q.q+" "+q.a.join(" ")).toLowerCase().includes(qy)||String(q.n)===qy);
+  const chip=(v,l)=>`<button class="chip ${studyUnit===v?"on":""}" data-chip="${v}">${l}</button>`;
+  return `<h1 class="page">Study guide</h1>
+  <div class="card" style="background:#F2F7FF;border-color:#D6E4FF"><p style="color:#33476B">These are the 128 official questions for applicants who filed Form N-400 on or after Oct 20, 2025. Answers marked <span class="badge cur">CHANGES</span> depend on who holds office — check <a href="https://www.uscis.gov/citizenship/testupdates" target="_blank" rel="noopener">uscis.gov/citizenship/testupdates</a> before your interview.</p></div>
+  <input class="search" id="search" placeholder="Search questions or answers…" value="${esc(studyQuery)}">
+  <div class="chips">${chip(-1,"All 128")}${chip(-2,"★ 65/20")}${UNITS.map((u,i)=>chip(i,u.t)).join("")}</div>
+  <div style="display:flex;gap:10px;margin-bottom:12px"><button class="btn small ghost" data-flash="${studyUnit}">Flashcards</button><span class="note" style="align-self:center">${list.length} questions</span></div>
+  ${list.map(qItem).join("")||`<p class="note">No matches.</p>`}`;
+}
+function qItem(q){
+  const m=Math.min(3,S.m[q.n]||0);
+  let ans = q.L ? (localReady(q)?localAnswers(q).map(a=>`<li>${esc(a)} <span class="note">(your answer)</span></li>`).join(""):"")+`<li>${esc(q.a[0])}</li>` : q.a.map(a=>`<li>${esc(displayAns(a))}</li>`).join("");
+  return `<div class="qitem"><div class="num">#${q.n} ${q.s?`<span class="badge star">★ 65/20</span>`:""}${q.c?`<span class="badge cur">CHANGES</span>`:""}${q.L?`<span class="badge loc">YOUR STATE</span>`:""}<span class="dots">${[0,1,2].map(i=>`<i class="${i<m?"f":""}"></i>`).join("")}</span></div>
+   <div class="q"><button class="speak" data-say="${q.n}" aria-label="Read aloud">${I.vol}</button>${esc(q.q)}</div><ul>${ans}</ul>
+   ${q.c?`<div class="note">Current as of November 2026. Verify at uscis.gov/citizenship/testupdates.</div>`:""}
+   ${q.n===30?`<div class="note">The Speaker is elected when each new Congress meets (next in January 2027), so this answer could change.</div>`:""}
+   ${q.L&&!localReady(q)?`<div class="note">Add your answer under Profile → My state to practice it.</div>`:""}
+   ${q.note?`<div class="note">${esc(q.note)}</div>`:""}</div>`;
+}
+
+/* ===================== PROFILE ===================== */
+function profileView(){
+  const mastered=Q.filter(q=>(S.m[q.n]||0)>=2).length, seen=Q.filter(q=>S.m[q.n]).length;
+  const sb=(ic,col,v,l)=>`<div class="sbox"><span style="color:${col}">${ic}</span><div><b>${v}</b><span>${l}</span></div></div>`;
+  const tg=(k,l,d)=>`<div class="toggle"><div><div style="font-weight:900">${l}</div><div class="note" style="margin:0">${d}</div></div><button class="sw ${S.set[k]?"on":""}" data-toggle="${k}" aria-label="${l}"></button></div>`;
+  const f=(k,l,ph)=>`<label class="f">${l}</label><input class="f" data-my="${k}" value="${esc(S.my[k])}" placeholder="${ph}">`;
+  return `<h1 class="page">Profile</h1>
+  <div class="grid2">${sb(I.fire,"#FF8A00",streakNow(),"Day streak")}${sb(I.gem,"#2F6FED",S.xp,"Total XP")}${sb(I.star,"#E09A00",mastered+"/128","Mastered")}${sb(I.trophy,"#3DBE5C",(S.best.mc!=null?S.best.mc+"/20":"—"),"Best mock score")}</div>
+  <div class="card"><h4>My state</h4><p>Four questions depend on where you live. Fill these in and they’ll show up in your lessons. Find your officials at senate.gov and house.gov.</p>
+   ${f("sen1","U.S. senator #1 (Q23)","e.g. Jane Smith")}${f("sen2","U.S. senator #2 (Q23)","e.g. John Doe")}${f("rep","U.S. representative (Q29)","Your district’s representative")}${f("gov","Governor (Q61)","Your governor")}${f("cap","State capital (Q62)","e.g. Austin")}
+   <p class="note" style="margin-top:10px">Saved on this device only.</p></div>
+  <div class="card"><h4>Settings</h4>
+   ${tg("sound","Sound effects","Dings and buzzes on answers")}
+   ${tg("speak","Read questions aloud","Hear each question, like in the interview")}
+   ${tg("order","Lock lessons in order","Off: every lesson is open. On: finish each lesson to unlock the next")}</div>
+  <div class="card"><h4>Progress</h4><p>${seen} of 128 questions seen · ${S.lessons} lessons finished</p><div style="margin-top:12px"><button class="btn small red" id="reset">Reset all progress</button></div></div>
+  <p class="note" style="text-align:center">Practice tool, not affiliated with USCIS. Questions from USCIS form M-1778 (2025 civics test).</p>`;
+}
+
+/* ===================== BINDINGS ===================== */
+function bind(){
+  document.querySelectorAll("[data-tab]").forEach(b=>b.onclick=()=>{TAB=b.dataset.tab;SND.tap();render();window.scrollTo(0,0)});
+  document.querySelectorAll("[data-node]").forEach(b=>b.onclick=()=>{const n=NODES.find(x=>x.id===b.dataset.node);startLesson(n)});
+  document.querySelectorAll("[data-studyunit]").forEach(b=>b.onclick=()=>{studyUnit=+b.dataset.studyunit;studyQuery="";TAB="study";render();window.scrollTo(0,0)});
+  document.querySelectorAll("[data-chip]").forEach(b=>b.onclick=()=>{studyUnit=+b.dataset.chip;render()});
+  document.querySelectorAll("[data-say]").forEach(b=>b.onclick=()=>speak(QBY[b.dataset.say].q));
+  document.querySelectorAll("[data-mock]").forEach(b=>b.onclick=()=>startMock(b.dataset.mock));
+  document.querySelectorAll("[data-practice]").forEach(b=>b.onclick=()=>startPractice(b.dataset.practice));
+  document.querySelectorAll("[data-flash]").forEach(b=>b.onclick=()=>startFlash(+b.dataset.flash));
+  document.querySelectorAll("[data-toggle]").forEach(b=>b.onclick=()=>{const k=b.dataset.toggle;S.set[k]=!S.set[k];save();render()});
+  document.querySelectorAll("[data-my]").forEach(i=>i.oninput=()=>{S.my[i.dataset.my]=i.value.trim();save()});
+  const s=$("#search"); if(s){s.oninput=()=>{studyQuery=s.value;const pos=s.selectionStart;render();const n=$("#search");n.focus();n.setSelectionRange(pos,pos)}}
+  const r=$("#reset"); if(r) r.onclick=()=>modal("Reset all progress?","Your XP, streak, lessons and mastery will be erased. This can’t be undone.",[["Reset everything","red",()=>{const my=S.my;S=JSON.parse(JSON.stringify(DEF));S.my=my;save();render()}],["Cancel","ghost",null]]);
+}
+function modal(title,text,btns,mood){
+  const m=document.createElement("div");m.className="modal";
+  m.innerHTML=`<div class="sheet pop"><div style="width:80px;margin:0 auto">${eagle(mood||"")}</div><h3>${title}</h3><p>${text}</p><div class="stack">${btns.map((b,i)=>`<button class="btn ${b[1]}" data-i="${i}">${b[0]}</button>`).join("")}</div></div>`;
+  document.body.appendChild(m);
+  m.querySelectorAll("[data-i]").forEach(b=>b.onclick=()=>{m.remove();const f=btns[+b.dataset.i][2];f&&f()});
+  m.onclick=e=>{if(e.target===m)m.remove()};
+}
+
+/* ===================== QUIZ ENGINE ===================== */
+let L=null; // current session
+function buildItem(q,forceMC){
+  if(q.L){ return localReady(q)?{q,mode:"type"}:{q,mode:"info"}; }
+  const canType = q.t && !forceMC && (S.m[q.n]||0)>=1 && Math.random()<0.5;
+  if(canType) return {q,mode:"type"};
+  const k=q.k||1, real=q.a.filter(a=>!a.startsWith("["));
+  let correct, opts;
+  if(k===1){ correct=sample(real,1)[0]; opts=[correct,...sample(q.d,3)]; }
+  else{
+    correct=sample(real,k).join(" • ");
+    const ds=sample(q.d,3); opts=[correct, ...ds.map(d=>shuffle([...sample(real,k-1),d]).join(" • "))];
+  }
+  return {q,mode:"mc",correct,opts:shuffle(opts)};
+}
+function startSession(cfg){
+  // cfg: {title, qs:[nums], kind:"lesson"|"review"|"practice"|"mock"|"six"|"oral", node, hearts, pass, stopWrong, max}
+  const items = cfg.qs.map(n=>QBY[n]).filter(q=>!(cfg.kind!=="lesson"&&cfg.kind!=="review"&&q.L&&!localReady(q))).map(q=>buildItem(q,cfg.kind==="mock"||cfg.kind==="six"));
+  L=Object.assign({queue:items,total:items.length,doneN:0,right:0,wrongN:0,mistakes:0,hearts:cfg.hearts??5,combo:0,bestCombo:0,start:Date.now(),answered:[],firstTry:new Set(),missed:new Set()},cfg);
+  showItem();
+}
+function startLesson(node){
+  if(node.type==="review") startSession({title:"Unit review",kind:"review",node,qs:sample(node.qs.filter(n=>!QBY[n].L||localReady(QBY[n])),Math.min(10,node.qs.length))});
+  else startSession({title:"Lesson",kind:"lesson",node,qs:shuffle(node.qs)});
+}
+function startPractice(type){
+  const pool = type==="wrong" ? Object.keys(S.wrong).map(Number) : Q.map(q=>q.n);
+  startSession({title:type==="wrong"?"Fix mistakes":"Quick 10",kind:"practice",sub:type,qs:sample(pool,Math.min(10,pool.length))});
+}
+function startMock(type){
+  if(type==="oral") return startOral();
+  if(type==="six") startSession({title:"65/20 test",kind:"six",qs:sample(Q.filter(q=>q.s&&(!q.L||localReady(q))).map(q=>q.n),10),hearts:null,pass:6,stopWrong:5,max:10});
+  else startSession({title:"Mock interview",kind:"mock",qs:sample(Q.filter(q=>!q.L||localReady(q)).map(q=>q.n),20),hearts:null,pass:12,stopWrong:9,max:20});
+}
+
+function lessonShell(inner,foot){
+  let el=$("#lesson"); if(!el){el=document.createElement("div");el.id="lesson";el.className="lesson";document.body.appendChild(el);document.body.style.overflow="hidden";}
+  el.innerHTML=`<div class="lesson-inner">${inner}</div>${foot||""}`;
+  return el;
+}
+function closeLesson(){const el=$("#lesson");if(el)el.remove();document.body.style.overflow="";L=null;try{speechSynthesis.cancel()}catch(e){};document.onkeydown=null;render();}
+function head(){
+  const isTest=L.kind==="mock"||L.kind==="six";
+  const pct = isTest ? (L.doneN/L.max*100) : (L.doneN/(L.total||1)*100);
+  const right = isTest ? `<div class="hearts" style="color:var(--green-d)">${I.check.replace('<svg','<svg style="width:22px;height:22px"')}${L.right}<span style="color:var(--red);margin-left:8px">${I.x.replace('<svg','<svg style="width:20px;height:20px"')}${L.wrongN}</span></div>`
+    : `<div class="hearts">${I.heart}${L.hearts}</div>`;
+  return `<div class="lhead"><button class="x" id="quit" aria-label="Quit">${I.x}</button><div class="pbar"><div style="width:${Math.max(3,pct)}%"></div></div>${right}</div>
+   <div class="combo">${L.combo>=3?`🔥 ${L.combo} in a row!`:""}</div>`;
+}
+function bindQuit(){ $("#quit").onclick=()=>modal("Wait, don’t go!","You’ll lose your progress in this "+(L.kind==="mock"||L.kind==="six"?"test":"lesson")+".",[["Keep learning","",null],["End session","ghost",closeLesson]],"sad"); }
+
+function showItem(){
+  const it=L.queue[0];
+  if(!it){ return finish(); }
+  const q=it.q;
+  const label = it.mode==="info" ? "Know your state" : it.mode==="type" ? "Type your answer" : (q.k>1?`Pick the set where all ${q.k} are correct`:"Choose the correct answer");
+  const tags=`${q.s?`<span class="star">★ 65/20</span>`:""}`;
+  let body="";
+  if(it.mode==="mc"){
+    body=`<div class="opts">${it.opts.map((o,i)=>`<button class="opt" data-o="${i}"><span class="k">${i+1}</span><span>${esc(displayAns(o))}</span></button>`).join("")}</div>`;
+  }else if(it.mode==="type"){
+    body=`<textarea class="type" id="typed" placeholder="Type in English…" autocomplete="off" autocapitalize="off" spellcheck="false"></textarea><div class="kbd">Press Enter to check</div>`;
+  }else{
+    body=`<div class="card" style="background:#F6F2FF;border-color:#E2D8FF"><h4 style="color:#5B3CC4">This answer depends on where you live</h4><p>${esc(q.a[0])}</p><p style="margin-top:8px">Look it up at <b>senate.gov</b>, <b>house.gov</b> or your state’s website, then add it under <b>Profile → My state</b> so you can practice it here.</p></div>`;
+  }
+  const foot=`<div class="lfoot" id="foot"><div class="inner"><div class="fb"></div><button class="btn fbbtn ${it.mode==="info"?"green":""}" id="check" ${it.mode==="info"?"":"disabled"}>${it.mode==="info"?"Got it":"Check"}</button></div></div>`;
+  lessonShell(`${head()}<div class="qtype">${label} ${tags}<span style="margin-left:auto;font-size:12px">Q${q.n}</span></div>
+    <div class="qbox"><div class="mascot">${eagle()}</div><div class="bubble"><button class="speak" id="say" aria-label="Read aloud">${I.vol}</button>${esc(q.q)}</div></div>${body}`,foot);
+  bindQuit();
+  $("#say").onclick=()=>speak(q.q);
+  if(S.set.speak) speak(q.q);
+  let sel=null;
+  const check=$("#check");
+  if(it.mode==="mc"){
+    document.querySelectorAll(".opt").forEach(b=>b.onclick=()=>{document.querySelectorAll(".opt").forEach(x=>x.classList.remove("sel"));b.classList.add("sel");sel=+b.dataset.o;check.disabled=false;SND.tap();});
+  }else if(it.mode==="type"){
+    const ta=$("#typed"); setTimeout(()=>ta.focus(),50);
+    ta.oninput=()=>{check.disabled=!ta.value.trim()};
+    ta.onkeydown=e=>{if(e.key==="Enter"){e.preventDefault();if(ta.value.trim())check.click()}};
+  }
+  check.onclick=()=>{
+    if(it.mode==="info"){ L.queue.shift(); L.doneN++; showItem(); return; }
+    let ok, given;
+    if(it.mode==="mc"){ ok = it.opts[sel]===it.correct; given=it.opts[sel];
+      document.querySelectorAll(".opt").forEach((b,i)=>{b.disabled=true; if(it.opts[i]===it.correct) b.classList.add("right"); else if(i===sel) b.classList.add("wrong");});
+    } else { given=$("#typed").value; ok = matches(given, q.L?localAnswers(q):q.a); $("#typed").disabled=true; }
+    feedback(it,ok);
+  };
+  document.onkeydown=e=>{
+    if(!L) return;
+    if(it.mode==="mc" && /^[1-4]$/.test(e.key) && !check.dataset.done){const b=document.querySelector(`.opt[data-o="${+e.key-1}"]`); b&&b.click();}
+    else if(e.key==="Enter" && document.activeElement?.id!=="typed"){const c=$("#check"); if(c&&!c.disabled){e.preventDefault();c.click()}}
+  };
+}
+function feedback(it,ok){
+  const q=it.q, isTest=L.kind==="mock"||L.kind==="six";
+  const foot=$("#foot"); foot.className="lfoot "+(ok?"ok":"bad");
+  const praise=["Nice!","Awesome!","Correct!","Great job!","You got it!","Perfect!"];
+  const shown = q.L ? localAnswers(q) : q.a.map(displayAns);
+  const best = it.mode==="mc" ? displayAns(it.correct) : shown[0];
+  foot.querySelector(".fb").innerHTML = `<div class="t">${ok?I.check.replace('<svg','<svg style="width:26px;height:26px"'):I.x.replace('<svg','<svg style="width:24px;height:24px"')} ${ok?praise[Math.floor(Math.random()*praise.length)]:"Correct answer:"}</div>
+    ${ok?(it.mode==="type"&&shown.length?`<div class="ans">Official wording: ${esc(shown[0])}</div>`:""):`<div class="ans">${esc(best)}</div>`}
+    ${shown.length>1?`<details><summary>All ${shown.length} accepted answers</summary><ul>${shown.map(a=>`<li>${esc(a)}</li>`).join("")}</ul></details>`:""}`;
+  const btn=$("#check"); btn.dataset.done=1; btn.textContent="Continue"; btn.disabled=false; btn.classList.remove("green","red"); btn.classList.add(ok?"green":"red");
+  if(ok){SND.ok(); L.combo++; L.bestCombo=Math.max(L.bestCombo,L.combo); S.m[q.n]=(S.m[q.n]||0)+1; if(L.kind==="practice"&&S.wrong[q.n]) delete S.wrong[q.n]; if(S.m[q.n]>=3) delete S.wrong[q.n];}
+  else{SND.bad(); L.combo=0; L.mistakes++; S.m[q.n]=Math.max(0,(S.m[q.n]||0)-1); S.wrong[q.n]=1; document.querySelector(".lesson-inner").classList.add("shake"); if(!isTest) L.hearts--;}
+  save();
+  btn.onclick=()=>{
+    L.queue.shift();
+    if(isTest){ L.doneN++; ok?L.right++:L.wrongN++; L.answered.push({n:q.n,ok}); }
+    else{ if(ok){L.doneN++; L.right++;} else { L.missed.add(q.n); L.queue.push(buildItem(q,true)); } }
+    if(!isTest && L.hearts<=0) return outOfHearts();
+    if(isTest && (L.right>=L.pass || L.wrongN>=L.stopWrong)) return finish();
+    showItem();
+  };
+}
+function outOfHearts(){
+  lessonShell(`<div class="center"><div style="width:150px">${eagle("sad")}</div><h2>Out of hearts</h2><p class="lead">No worries — every mistake is practice. Review the questions and try again.</p>
+   <div style="width:100%;display:flex;flex-direction:column;gap:12px"><button class="btn" id="retry">Try again</button><button class="btn ghost" id="leave">Back to path</button></div></div>`);
+  const cfg={title:L.title,kind:L.kind,node:L.node,sub:L.sub,qs:L.node?L.node.qs:L.qs};
+  $("#retry").onclick=()=>{ if(cfg.node) startLesson(cfg.node); else startPractice(cfg.sub||"rand"); };
+  $("#leave").onclick=closeLesson;
+}
+function finish(){
+  const secs=Math.round((Date.now()-L.start)/1000), time=`${Math.floor(secs/60)}:${String(secs%60).padStart(2,"0")}`;
+  const isTest=L.kind==="mock"||L.kind==="six";
+  let xp, title, lead, mood="happy", passed=true;
+  if(isTest){
+    passed=L.right>=L.pass;
+    xp = L.right*2 + (passed?10:0);
+    title = passed?"You passed! 🇺🇸":"Not quite yet";
+    lead = passed?`${L.right} correct after ${L.doneN} questions — the officer would stop here. You passed!`:`${L.right} correct, ${L.wrongN} wrong. You need ${L.pass}. Keep practicing — you’ve got this.`;
+    mood = passed?"happy":"sad";
+    if(L.kind==="mock"){ S.best.mc=Math.max(S.best.mc||0,L.right); }
+  } else {
+    const acc = Math.round(L.total/(L.total+L.mistakes)*100);
+    xp = 10 + (L.mistakes===0?5:0) + (L.kind==="review"?10:0);
+    title = L.mistakes===0?"Flawless lesson!":L.kind==="review"?"Unit complete!":"Lesson complete!";
+    lead = L.mistakes===0?"Zero mistakes. You’re on fire.":`${acc}% accuracy · best streak ${L.bestCombo}`;
+    if(L.node){ S.done[L.node.id]=true; }
+    S.lessons++;
+  }
+  addXP(xp); save(); SND[passed?"win":"bad"](); if(passed) confetti();
+  const tile=(c,h,v,ic)=>`<div class="tile" style="border-color:${c}"><div class="h" style="background:${c}">${h}</div><div class="v" style="color:${c}">${ic||""}${v}</div></div>`;
+  let review="";
+  if(isTest){
+    review=`<div style="width:100%;text-align:left;margin-top:22px"><h4 style="margin:0 0 8px">Your answers</h4>${L.answered.map(a=>{const q=QBY[a.n];return `<div class="qitem" style="border-color:${a.ok?"#BDEBC8":"#FFC9CB"}"><div class="num">#${q.n} ${a.ok?"✅":"❌"}</div><div class="q" style="font-size:15px">${esc(q.q)}</div>${a.ok?"":`<ul>${(q.L?localAnswers(q):q.a.map(displayAns)).slice(0,4).map(x=>`<li>${esc(x)}</li>`).join("")}</ul>`}</div>`}).join("")}</div>`;
+  }
+  lessonShell(`<div class="center"><div style="width:150px" class="pop">${eagle(mood)}</div><h2 style="color:${passed?"var(--gold-d)":"var(--red-d)"}">${title}</h2><p class="lead">${lead}</p>
+    <div class="tiles">${tile("#FFC23D","Total XP","+"+xp,I.bolt.replace('<svg','<svg style="width:22px;height:22px"'))}${isTest?tile("#3DBE5C","Score",`${L.right}/${L.doneN}`):tile("#3DBE5C","Accuracy",Math.round(L.total/(L.total+L.mistakes||1)*100)+"%")}${tile("#2F6FED","Time",time)}</div>
+    ${review}
+    <div style="width:100%;margin-top:26px;display:flex;flex-direction:column;gap:12px;padding-bottom:24px">${isTest&&!passed?`<button class="btn" id="again">Try another test</button>`:""}<button class="btn ${isTest&&!passed?"ghost":"green"}" id="cont">Continue</button></div></div>`);
+  $("#cont").onclick=closeLesson;
+  const ag=$("#again"); if(ag){const k=L.kind; ag.onclick=()=>startMock(k==="six"?"six":"mc");}
+}
+
+/* ===================== ORAL MODE ===================== */
+function startOral(){
+  const qs=sample(Q.filter(q=>!q.L||localReady(q)).map(q=>q.n),20);
+  L={kind:"mock",title:"Oral interview",queue:qs.map(n=>({q:QBY[n],mode:"oral"})),doneN:0,right:0,wrongN:0,pass:12,stopWrong:9,max:20,answered:[],start:Date.now(),combo:0,mistakes:0,total:20};
+  showOral();
+}
+function showOral(){
+  const it=L.queue[0]; if(!it) return finish();
+  const q=it.q, ans=q.L?localAnswers(q):q.a.map(displayAns);
+  lessonShell(`${head()}<div class="qtype">Officer asks… <span style="margin-left:auto;font-size:12px">Q${q.n}</span></div>
+   <div class="qbox"><div class="mascot">${eagle()}</div><div class="bubble"><button class="speak" id="say">${I.vol}</button>${esc(q.q)}</div></div>
+   <div class="card" id="reveal" style="display:none;background:#F2F7FF;border-color:#D6E4FF"><h4>Accepted answers</h4><ul style="margin:0;padding-left:20px;line-height:1.5">${ans.map(a=>`<li>${esc(a)}</li>`).join("")}</ul></div>
+   <p class="note" id="hint" style="text-align:center">Say your answer out loud, then reveal.</p>`,
+   `<div class="lfoot" id="foot"><div class="inner" id="oralbtns"><button class="btn" id="show">Reveal answer</button></div></div>`);
+  bindQuit(); $("#say").onclick=()=>speak(q.q); speak(q.q);
+  $("#show").onclick=()=>{ $("#reveal").style.display="block"; $("#hint").style.display="none";
+    $("#oralbtns").innerHTML=`<button class="btn red" id="miss">I missed it</button><button class="btn green" id="got">I got it</button>`;
+    const go=ok=>{ L.queue.shift(); L.doneN++; ok?L.right++:L.wrongN++; L.answered.push({n:q.n,ok});
+      if(ok){SND.ok();S.m[q.n]=(S.m[q.n]||0)+1}else{SND.bad();S.wrong[q.n]=1} save();
+      if(L.right>=L.pass||L.wrongN>=L.stopWrong) return finish(); showOral(); };
+    $("#got").onclick=()=>go(true); $("#miss").onclick=()=>go(false); };
+}
+
+/* ===================== FLASHCARDS ===================== */
+function startFlash(unit){
+  let list = unit>=0 ? Q.filter(q=>q.n>=UNITS[unit].r[0]&&q.n<=UNITS[unit].r[1]) : unit===-2 ? Q.filter(q=>q.s) : Q.slice();
+  list=shuffle(list); let i=0;
+  L={kind:"flash"};
+  const draw=()=>{
+    const q=list[i], ans=q.L?(localReady(q)?localAnswers(q):[q.a[0]]):q.a.map(displayAns);
+    lessonShell(`<div class="lhead"><button class="x" id="fx">${I.x}</button><div class="pbar"><div style="width:${(i+1)/list.length*100}%"></div></div><div class="hearts" style="color:var(--muted);font-size:14px">${i+1}/${list.length}</div></div>
+     <div class="flash" id="fc"><div class="in"><div class="face"><small>Question ${q.n}${q.s?" · ★ 65/20":""}</small>${esc(q.q)}<div class="note" style="margin-top:16px">Tap to flip</div></div>
+     <div class="face back"><small>Answer${ans.length>1?"s":""}</small><ul>${ans.map(a=>`<li>${esc(a)}</li>`).join("")}</ul></div></div></div>
+     <div style="display:flex;gap:12px"><button class="btn ghost" id="prev" ${i===0?"disabled":""}>Back</button><button class="btn ghost" id="fs" style="width:70px;flex-shrink:0" aria-label="Read aloud">${I.vol.replace('<svg','<svg style="width:22px;height:22px;vertical-align:middle"')}</button><button class="btn" id="next">${i===list.length-1?"Finish":"Next"}</button></div>`);
+    $("#fc").onclick=()=>{$("#fc").classList.toggle("flip");SND.tap()};
+    $("#fx").onclick=closeLesson; $("#fs").onclick=()=>speak($("#fc").classList.contains("flip")?ans[0]:q.q);
+    $("#prev").onclick=()=>{i--;draw()}; $("#next").onclick=()=>{if(i===list.length-1)closeLesson();else{i++;draw()}};
+    document.onkeydown=e=>{if(e.key===" "){e.preventDefault();$("#fc").click()}else if(e.key==="ArrowRight")$("#next").click();else if(e.key==="ArrowLeft"&&i>0)$("#prev").click()};
+  };
+  draw();
+}
+
+/* ===================== CONFETTI ===================== */
+function confetti(){
+  const c=$("#confetti"),x=c.getContext("2d");c.width=innerWidth;c.height=innerHeight;
+  const cols=["#2F6FED","#E5484D","#FFC23D","#3DBE5C","#FFFFFF","#7B5CE0"];
+  const P=Array.from({length:140},()=>({x:innerWidth/2+(Math.random()-.5)*200,y:innerHeight*.35,vx:(Math.random()-.5)*14,vy:-Math.random()*14-4,r:Math.random()*6+4,c:cols[Math.floor(Math.random()*cols.length)],a:Math.random()*6,va:(Math.random()-.5)*.3}));
+  let f=0;(function tick(){x.clearRect(0,0,c.width,c.height);P.forEach(p=>{p.vy+=.35;p.vx*=.99;p.x+=p.vx;p.y+=p.vy;p.a+=p.va;x.save();x.translate(p.x,p.y);x.rotate(p.a);x.fillStyle=p.c;x.fillRect(-p.r/2,-p.r/4,p.r,p.r/2);x.restore()});if(++f<160)requestAnimationFrame(tick);else x.clearRect(0,0,c.width,c.height)})();
+}
+
+render();
+</script>
+</body>
+</html>
